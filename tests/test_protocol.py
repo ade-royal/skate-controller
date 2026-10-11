@@ -7,7 +7,7 @@ import threading
 import time
 import unittest
 
-from network.protocol import StateDecoder, decode_state, encode_state
+from network.protocol import StateDecoder, decode_state, encode_state, encode_update
 from network.session import handle_client
 
 
@@ -26,6 +26,14 @@ class ProtocolTests(unittest.TestCase):
             encode_state("forward")
         with self.assertRaises(ValueError):
             decode_state("left")
+
+    def test_ollie_is_sent_beside_steering(self) -> None:
+        self.assertEqual(encode_update("RIGHT", "OLLIE"), b"RIGHT\nOLLIE\n")
+        self.assertEqual(encode_update("LEFT"), b"LEFT\n")
+        self.assertEqual(
+            StateDecoder().feed(encode_update("RIGHT", "OLLIE")),
+            ["RIGHT", "OLLIE"],
+        )
 
     def test_decoder_waits_for_a_full_line(self) -> None:
         decoder = StateDecoder()

@@ -1,4 +1,4 @@
-"""Receive LEFT, CENTER, and RIGHT and hold the mapped keys.
+"""Receive steering states and ollie events and apply the mapped keys.
 
 Run this on the Windows laptop from the repository root:
 
@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from controller.ollie import OLLIE
 from laptop.keyboard_output import KeyBindings, KeyboardOutput, NullKeyboard, pynput_keyboard
 from network.protocol import DEFAULT_PORT
 from network.session import handle_client, poll_accept
@@ -60,7 +61,7 @@ def main(argv: list[str] | None = None) -> None:
         keyboard = NullKeyboard()
     else:
         keyboard = pynput_keyboard()
-    output = KeyboardOutput(bindings, keyboard=keyboard)
+    output = KeyboardOutput(bindings, keyboard=keyboard, trace_ollie=True)
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -118,6 +119,8 @@ def close_socket(connection) -> None:
 
 
 def _on_state(output: KeyboardOutput, state: str) -> None:
+    if state == OLLIE:
+        print("OLLIE received", flush=True)
     if output.apply_state(state):
         print(output.status_line(), flush=True)
 
@@ -126,6 +129,7 @@ def _print_banner(args: argparse.Namespace, bindings: KeyBindings) -> None:
     mode = "dry run, no keys will be pressed" if args.dry_run else "keys will be pressed"
     print(f"Listening on {args.host}:{args.port} ({mode})")
     print(f"LEFT holds {bindings.left!r}    RIGHT holds {bindings.right!r}    CENTER releases both")
+    print("OLLIE taps space once and leaves the steering key held")
     hints = ipv4_hints()
     if hints:
         print("IPv4 addresses seen from Python: " + ", ".join(hints))

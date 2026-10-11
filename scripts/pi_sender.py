@@ -1,5 +1,8 @@
 """Read the skateboard and send LEFT, CENTER, or RIGHT to the laptop.
 
+An ollie is an extra OLLIE line beside the steering state. It does not
+replace LEFT, CENTER, or RIGHT.
+
 Run this on the Raspberry Pi from the repository root:
 
     python3 scripts/pi_sender.py --host <laptop-ip>
@@ -27,7 +30,8 @@ from controller.movement import (
     adjusted_steering,
     classify_movement,
 )
-from network.protocol import DEFAULT_PORT, encode_state
+from controller.ollie import OllieConfig, OllieDetector
+from network.protocol import DEFAULT_PORT, encode_update
 from sensor.mpu6050 import MPU6050
 
 SAMPLE_INTERVAL_SECONDS = 0.1
@@ -45,23 +49,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def read_state(
     sensor: MPU6050,
     config: MovementConfig,
-) -> tuple[str, dict[str, float] | None, str | None]:
-    """Classify one sample. A failed sensor read becomes CENTER."""
+    ollie: OllieDetector | None = None,
+    now: float = 0.0,
+) -> tuple[str, dict[str, float] | None, str | None, str | None]:
+    """Classify one sample. A failed sensor read becomes CENTER and no ollie."""
     try:
         acceleration = sensor.get_acceleration()
     except OSError as exc:
-        return CENTER, None, str(exc)
-    return classify_movement(acceleration, config), acceleration, None
+        return CENTER, None, str(exc), None
+    event = None
+    if ollie is not None:
+        event = ollie.update(float(acceleration["x"]), now)
+    return classify_movement(acceleration, config), acceleration, None, event
 
 
-def send_forever(sensor: MPU6050, config: MovementConfig, host: str, port: int) -> None:
+def send_forever(
+    sensor: MPU6050,
+    config: MovementConfig,
+    host: str,
+    port: int,
+    ollie_config: OllieConfig | None = None,
+) -> None:
+    ollie_config = ollie_config or OllieConfig()
+    ollie = OllieDetector(ollie_config)
     while True:
         try:
             print(f"Connecting to {host}:{port}...")
             with socket.create_connection((host, port), timeout=5) as connection:
                 connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 print(f"Connected to {host}:{port}")
-                _stream(connection, sensor, config, host, port)
+                _stream(connection, sensor, config, ollie, ollie_config, host, port)
         except OSError as exc:
             print(f"Connection to {host}:{port} failed: {exc}")
             print(f"Retrying in {CONNECT_RETRY_SECONDS:.0f}s. Ctrl+C to stop.")
@@ -71,9 +88,10 @@ def send_forever(sensor: MPU6050, config: MovementConfig, host: str, port: int) 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     config = MovementConfig()
+    ollie_config = OllieConfig()
     sensor = MPU6050()
     try:
-        send_forever(sensor, config, args.host, args.port)
+        send_forever(sensor, config, args.host, args.port, ollie_config)
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
@@ -84,26 +102,55 @@ def _stream(
     connection: socket.socket,
     sensor: MPU6050,
     config: MovementConfig,
+    ollie: OllieDetector,
+    ollie_config: OllieConfig,
     host: str,
     port: int,
 ) -> None:
+    last_notice = "none yet"
     while True:
-        state, acceleration, error = read_state(sensor, config)
+        now = time.monotonic()
+        state, acceleration, error, event = read_state(sensor, config, ollie, now)
+        payload = encode_update(state, event)
         try:
-            connection.sendall(encode_state(state))
+            connection.sendall(payload)
         except OSError as exc:
             print(f"\nSend failed: {exc}")
             return
-        frame = _format_frame(acceleration, state, config, host, port, error)
+        if event is not None and acceleration is not None:
+            last_notice = (
+                f"FIRED and SENT  X {acceleration['x']:+.3f} g  "
+                + payload.decode("ascii").replace("\n", " | ")
+            )
+        frame = _format_frame(
+            acceleration,
+            state,
+            event,
+            config,
+            ollie_config,
+            ollie.arm_status(now, _above_gate(acceleration, ollie_config)),
+            last_notice,
+            host,
+            port,
+            error,
+        )
         print("\033[H\033[J" + frame, flush=True)
         delay = SAMPLE_INTERVAL_SECONDS if acceleration is not None else READ_RETRY_SECONDS
         time.sleep(delay)
 
 
+def _above_gate(acceleration: dict[str, float] | None, ollie_config: OllieConfig) -> bool:
+    return acceleration is not None and acceleration["x"] >= ollie_config.threshold
+
+
 def _format_frame(
     acceleration: dict[str, float] | None,
     state: str,
+    event: str | None,
     config: MovementConfig,
+    ollie_config: OllieConfig,
+    arm: str,
+    last_notice: str,
     host: str,
     port: int,
     error: str | None = None,
@@ -120,12 +167,26 @@ def _format_frame(
             f"Z {acceleration['z']:+8.3f}"
         )
         steer_line = f"STEER      {steering:+8.3f}"
+    if acceleration is None:
+        x_line = "X          unavailable"
+    else:
+        gate = "ABOVE" if acceleration["x"] >= ollie_config.threshold else "below"
+        x_line = f"X          {acceleration['x']:+8.3f} g   {gate} {ollie_config.threshold:.3f}"
+    if event is None:
+        this_line = "THIS       no ollie"
+    else:
+        this_line = "THIS       OLLIE fired and sent"
     lines = [
         f"Sending {state} to {host}:{port}    Ctrl+C to stop",
         "",
         accel_line,
         steer_line,
         f"STATE      {state}",
+        "",
+        x_line,
+        f"ARM        {arm}",
+        this_line,
+        f"LAST       {last_notice}",
     ]
     if error is not None:
         lines.append(f"SENSOR     {error}")

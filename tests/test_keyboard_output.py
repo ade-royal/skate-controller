@@ -80,10 +80,13 @@ class KeyboardOutputTests(unittest.TestCase):
         self.output.close()
         self.assertEqual(
             self.keyboard.events,
-            [("press", "a"), ("release", "a"), ("release", "d")],
+            [("press", "a"), ("release", "a"), ("release", "d"), ("release", "space")],
         )
         self.output.close()
-        self.assertEqual(self.keyboard.events[-2:], [("release", "a"), ("release", "d")])
+        self.assertEqual(
+            self.keyboard.events[-3:],
+            [("release", "a"), ("release", "d"), ("release", "space")],
+        )
 
     def test_custom_bindings(self) -> None:
         output = KeyboardOutput(KeyBindings("j", "l"), keyboard=self.keyboard)
@@ -106,6 +109,31 @@ class KeyboardOutputTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.output.apply_state("FORWARD")
         self.assertEqual(self.keyboard.events, [])
+
+    def test_ollie_taps_space_and_leaves_d_held(self) -> None:
+        self.output.apply_state("RIGHT")
+        self.assertTrue(self.output.apply_state("OLLIE"))
+        self.assertEqual(
+            self.keyboard.events,
+            [("press", "d"), ("press", "space"), ("release", "space")],
+        )
+        self.assertEqual(self.output.status_line(), "OLLIE  tapped space    RIGHT  holding d")
+        self.assertEqual(self.output.status_line(), "RIGHT  holding d")
+        self.assertFalse(self.output.apply_state("RIGHT"))
+        self.assertEqual(self.keyboard.events[-1], ("release", "space"))
+
+    def test_each_ollie_event_taps_space_again(self) -> None:
+        self.output.apply_state("OLLIE")
+        self.output.apply_state("OLLIE")
+        self.assertEqual(
+            self.keyboard.events,
+            [
+                ("press", "space"),
+                ("release", "space"),
+                ("press", "space"),
+                ("release", "space"),
+            ],
+        )
 
 
 if __name__ == "__main__":

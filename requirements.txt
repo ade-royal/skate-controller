@@ -4,3 +4,7 @@ smbus2
 
 # Windows laptop keyboard output. The Raspberry Pi does not need this.
 pynput
+
+# Windows laptop webcam pose debug. The Raspberry Pi does not need these.
+mediapipe
+opencv-python
