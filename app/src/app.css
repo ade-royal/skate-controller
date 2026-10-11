@@ -1,0 +1,48 @@
+@font-face {
+  font-family: "Barge";
+  font-display: swap;
+  src: url("/fonts/Barge-BlackItalic.otf"), local("Barge Black Italic");
+  font-weight: 900;
+  font-style: italic;
+}
+@font-face {
+  font-family: "Coolvetica";
+  font-display: swap;
+  src: url("/fonts/Coolvetica Rg.otf"), local("Coolvetica Regular");
+  font-style: normal;
+}
+@font-face {
+  font-family: "Coolvetica";
+  font-display: swap;
+  src: url("/fonts/Coolvetica Rg It.otf"), local("Coolvetica Italic");
+  font-style: italic;
+}
+@font-face {
+  font-family: "Babel Sans";
+  font-display: swap;
+  src: url("/fonts/BabelSans-BoldOblique.ttf"), local("BabelSans-BoldOblique");
+  font-weight: 700;
+  font-style: oblique;
+}
+@font-face {
+  font-family: "Babel Sans Upright";
+  font-display: swap;
+  src: url("/fonts/BabelSans-Bold.ttf"), local("BabelSans-Bold");
+  font-weight: 700;
+}
+
+:root {
+  --bg: #0b0b0b;
+  --red: #8a0d0d;
+  --red-hot: #d4161c;
+  --chip: #d9d9d9;
+  --ink: #0b0b0b;
+  --white: #f4f4f4;
+  --muted: #6b6b6b;
+  --label: "Babel Sans", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--white); overflow: hidden; }
+body { font-family: "Coolvetica", system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
+button { font: inherit; color: inherit; cursor: pointer; }

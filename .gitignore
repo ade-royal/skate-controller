@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local app config (holds the Pi password)
+backend/config.json
+# Licensed fonts copied locally for the app UI
+app/static/fonts/
+!app/src/lib/
