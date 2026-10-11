@@ -76,9 +76,9 @@
     color: var(--white);
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   }
-  h1 span:first-child { font-size: 56px; padding-left: 14px; }
-  h1 span:last-child { font-size: 36px; }
-  .brand p { margin: 8px 0 0; font-family: "Coolvetica"; font-size: 14px; color: var(--white); }
+  h1 span:first-child { font-size: 66px; padding-left: 14px; }
+  h1 span:last-child { font-size: 43px; }
+  .brand p { margin: 8px 0 0; font-family: "Coolvetica"; font-size: 17px; color: var(--white); }
   .brand b { font-style: italic; font-weight: 700; }
 
   .tab {

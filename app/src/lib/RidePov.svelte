@@ -3,11 +3,11 @@
 
   let { backend }: { backend: Backend } = $props();
 
-  // The webcam is mounted upside down on the board; remember the choice.
-  let flipped = $state(localStorage.getItem("camFlip") !== "0");
+  // The webcam is mounted upside down, so rotate 180° by default; remember the choice.
+  let flipped = $state(localStorage.getItem("camFeedRotate") !== "0");
   function toggleFlip() {
     flipped = !flipped;
-    localStorage.setItem("camFlip", flipped ? "1" : "0");
+    localStorage.setItem("camFeedRotate", flipped ? "1" : "0");
   }
 
   const tick = $derived(backend.tick);
