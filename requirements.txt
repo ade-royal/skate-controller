@@ -1,1 +1,3 @@
-# Add runtime dependencies here.
+# Raspberry Pi I2C access for the MPU-6050.
+# Unit tests do not need this package.
+smbus2
