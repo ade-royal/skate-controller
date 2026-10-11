@@ -17,11 +17,14 @@ class RecordingKeyboard:
     def release(self, key: str) -> None:
         self.events.append(("release", key))
 
+    def type(self, text: str) -> None:
+        self.events.append(("type", text))
+
 
 class KeyboardOutputTests(unittest.TestCase):
     def setUp(self) -> None:
         self.keyboard = RecordingKeyboard()
-        self.output = KeyboardOutput(keyboard=self.keyboard)
+        self.output = KeyboardOutput(KeyBindings("a", "d"), keyboard=self.keyboard)
 
     def test_left_holds_a(self) -> None:
         self.assertTrue(self.output.apply_state("LEFT"))
@@ -106,6 +109,46 @@ class KeyboardOutputTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.output.apply_state("FORWARD")
         self.assertEqual(self.keyboard.events, [])
+
+
+class PhraseBindingTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.keyboard = RecordingKeyboard()
+        self.output = KeyboardOutput(keyboard=self.keyboard)
+
+    def test_defaults_are_hack_and_lanta(self) -> None:
+        self.assertEqual((self.output.bindings.left, self.output.bindings.right), ("hack", "lanta_"))
+
+    def test_left_types_hack_once(self) -> None:
+        self.assertTrue(self.output.apply_state("LEFT"))
+        self.assertFalse(self.output.apply_state("LEFT"))
+        self.assertEqual(self.keyboard.events, [("type", "hack")])
+        self.assertEqual(self.output.status_line(), "LEFT  typed hack")
+
+    def test_right_types_lanta_with_underscore(self) -> None:
+        self.output.apply_state("RIGHT")
+        self.assertEqual(self.keyboard.events, [("type", "lanta_")])
+        self.assertEqual(self.output.status_line(), "RIGHT  typed lanta_")
+
+    def test_left_then_right_types_each_phrase_once(self) -> None:
+        self.output.apply_state("LEFT")
+        self.output.apply_state("RIGHT")
+        self.assertEqual(self.keyboard.events, [("type", "hack"), ("type", "lanta_")])
+
+    def test_center_does_not_type_again(self) -> None:
+        self.output.apply_state("LEFT")
+        self.output.apply_state("CENTER")
+        self.assertEqual(self.keyboard.events, [("type", "hack")])
+        self.assertEqual(self.output.status_line(), "CENTER  keys released")
+
+    def test_close_does_not_release_the_phrase_as_a_key(self) -> None:
+        self.output.apply_state("RIGHT")
+        self.output.close()
+        self.assertEqual(self.keyboard.events, [("type", "lanta_")])
+
+    def test_phrase_with_a_space_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            KeyBindings("hack", "lanta _")
 
 
 if __name__ == "__main__":

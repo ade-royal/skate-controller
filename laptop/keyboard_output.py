@@ -1,8 +1,8 @@
-"""Press and release steering keys from LEFT, CENTER, and RIGHT.
+"""Turn LEFT, CENTER, and RIGHT into keyboard input.
 
-The laptop holds at most one steering key. A new direction releases the
-previous key before the next press. Repeating the same state does not
-press the key again.
+A one-letter binding is held until the state changes. A longer binding,
+such as "hack", is typed once when that state begins and is not repeated
+while the board stays there.
 """
 
 from __future__ import annotations
@@ -14,19 +14,20 @@ from controller.movement import CENTER, LEFT, RIGHT
 
 @dataclass(frozen=True)
 class KeyBindings:
-    """Character keys for the two steering directions.
+    """Text typed or held for the two steering directions.
 
-    Defaults match the first playable mapping: LEFT holds a, RIGHT holds d.
+    LEFT types hack. RIGHT types lanta_. Pass one letter, such as a and d,
+    when a game should see a held key instead.
     """
 
-    left: str = "a"
-    right: str = "d"
+    left: str = "hack"
+    right: str = "lanta_"
 
     def __post_init__(self) -> None:
-        left = _one_letter(self.left, "left")
-        right = _one_letter(self.right, "right")
+        left = _normalize_binding(self.left, "left")
+        right = _normalize_binding(self.right, "right")
         if left == right:
-            raise ValueError("LEFT and RIGHT must use different keys.")
+            raise ValueError("LEFT and RIGHT must use different inputs.")
         object.__setattr__(self, "left", left)
         object.__setattr__(self, "right", right)
 
@@ -37,40 +38,52 @@ class KeyboardOutput:
     def __init__(self, bindings: KeyBindings | None = None, keyboard=None) -> None:
         self.bindings = bindings or KeyBindings()
         self._keyboard = keyboard if keyboard is not None else pynput_keyboard()
-        self._held: str | None = None
+        self._active: str | None = None
+        self._held_key: str | None = None
 
     def apply_state(self, state: str) -> bool:
-        """Hold the key for this state. Return True when the held key changes."""
+        """Apply this state once. Return True when the active input changes."""
         desired = self._key_for(state)
-        if desired == self._held:
+        if desired == self._active:
             return False
         if desired is None:
             self.close()
             return True
-        if self._held is not None:
-            key = self._held
-            self._keyboard.release(key)
-            self._held = None
-        self._held = desired
-        self._keyboard.press(desired)
+        self._release_held_key()
+        self._active = desired
+        if _is_single_letter(desired):
+            self._held_key = desired
+            self._keyboard.press(desired)
+        else:
+            self._keyboard.type(desired)
         return True
 
     def close(self) -> None:
-        """Release every steering key. Safe to call more than once."""
+        """Release any held steering key. Safe to call more than once."""
         released: list[str] = []
-        for key in (self._held, self.bindings.left, self.bindings.right):
-            if key is None or key in released:
+        if self._held_key is not None:
+            self._keyboard.release(self._held_key)
+            released.append(self._held_key)
+            self._held_key = None
+        for key in (self.bindings.left, self.bindings.right):
+            if not _is_single_letter(key) or key in released:
                 continue
             self._keyboard.release(key)
             released.append(key)
-        self._held = None
+        self._active = None
 
     def status_line(self) -> str:
-        if self._held == self.bindings.left:
-            return f"LEFT  holding {self.bindings.left}"
-        if self._held == self.bindings.right:
-            return f"RIGHT  holding {self.bindings.right}"
+        if self._active == self.bindings.left:
+            return f"LEFT  {_action_word(self.bindings.left)} {self.bindings.left}"
+        if self._active == self.bindings.right:
+            return f"RIGHT  {_action_word(self.bindings.right)} {self.bindings.right}"
         return "CENTER  keys released"
+
+    def _release_held_key(self) -> None:
+        if self._held_key is None:
+            return
+        self._keyboard.release(self._held_key)
+        self._held_key = None
 
     def _key_for(self, state: str) -> str | None:
         if state == LEFT:
@@ -93,6 +106,9 @@ class NullKeyboard:
     def release(self, key: str) -> None:
         return None
 
+    def type(self, text: str) -> None:
+        return None
+
 
 def pynput_keyboard():
     """Return a pynput controller. Import pynput only when keys are real."""
@@ -106,7 +122,21 @@ def pynput_keyboard():
     return Controller()
 
 
-def _one_letter(key: str, name: str) -> str:
-    if len(key) != 1 or not key.isalpha():
-        raise ValueError(f"{name} key must be one letter, got {key!r}.")
-    return key.lower()
+def _normalize_binding(value: str, name: str) -> str:
+    if not value or any(not (character.isalnum() or character == "_") for character in value):
+        raise ValueError(
+            f"{name} input must be letters, digits, or underscore, got {value!r}."
+        )
+    if _is_single_letter(value):
+        return value.lower()
+    return value
+
+
+def _is_single_letter(value: str) -> bool:
+    return len(value) == 1 and value.isalpha()
+
+
+def _action_word(value: str) -> str:
+    if _is_single_letter(value):
+        return "holding"
+    return "typed"

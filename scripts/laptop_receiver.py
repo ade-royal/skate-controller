@@ -1,4 +1,4 @@
-"""Receive LEFT, CENTER, and RIGHT and hold the mapped keys.
+"""Receive LEFT, CENTER, and RIGHT and send the mapped keyboard input.
 
 Run this on the Windows laptop from the repository root:
 
@@ -28,8 +28,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Turn skateboard states into keys.")
     parser.add_argument("--host", default="0.0.0.0", help="Address to listen on.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--left-key", default="a", help="Key held for LEFT.")
-    parser.add_argument("--right-key", default="d", help="Key held for RIGHT.")
+    parser.add_argument("--left-key", default="hack", help="Text typed for LEFT. One letter is held.")
+    parser.add_argument("--right-key", default="lanta_", help="Text typed for RIGHT. One letter is held.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -125,7 +125,7 @@ def _on_state(output: KeyboardOutput, state: str) -> None:
 def _print_banner(args: argparse.Namespace, bindings: KeyBindings) -> None:
     mode = "dry run, no keys will be pressed" if args.dry_run else "keys will be pressed"
     print(f"Listening on {args.host}:{args.port} ({mode})")
-    print(f"LEFT holds {bindings.left!r}    RIGHT holds {bindings.right!r}    CENTER releases both")
+    print(f"LEFT uses {bindings.left!r}    RIGHT uses {bindings.right!r}    CENTER releases held keys")
     hints = ipv4_hints()
     if hints:
         print("IPv4 addresses seen from Python: " + ", ".join(hints))
