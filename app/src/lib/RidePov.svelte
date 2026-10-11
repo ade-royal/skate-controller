@@ -122,7 +122,7 @@
   .pitch { position: absolute; right: 26px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; }
   .bar { position: relative; width: 6px; height: 160px; background: rgba(255, 255, 255, 0.3); }
   .bar i { position: absolute; left: -5px; width: 16px; height: 3px; background: var(--red-hot); }
-  .gforce { position: absolute; left: 22px; bottom: 110px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; }
+  .gforce { position: absolute; left: 22px; top: 290px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 10px; }
   .ring { position: relative; width: 70px; height: 70px; border: 2px solid rgba(255, 255, 255, 0.7); border-radius: 50%; }
   .ring i { position: absolute; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: var(--red-hot); }
   .lean { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
