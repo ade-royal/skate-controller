@@ -26,7 +26,7 @@ export type Tick = {
   center: number;
   ride_s: number;
   tele: Partial<Tele>;
-  phone: { connected: boolean; mode: "walk" | "skate"; go: boolean; y: boolean };
+  phone: { connected: boolean; walk: boolean; push: boolean; y: boolean };
   phone_url: string;
 };
 

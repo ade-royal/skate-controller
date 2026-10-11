@@ -87,8 +87,12 @@
         <span class="label">WALK ⇄ SKATE</span>
       </div>
       <div class="phone-keys">
-        <span class={["key", { lit: tick.phone.go }]}>GO</span>
-        <span class="label">{tick.phone.mode === "skate" ? "PUSH" : "WALK FWD"} · {tick.phone.go ? "ON" : "OFF"}</span>
+        <span class={["key", { lit: tick.phone.walk }]}>WALK</span>
+        <span class="label">W · {tick.phone.walk ? "ON" : "OFF"}</span>
+      </div>
+      <div class="phone-keys">
+        <span class={["key", { lit: tick.phone.push }]}>PUSH</span>
+        <span class="label">A · {tick.phone.push ? "ON" : "OFF"}</span>
       </div>
     {:else if tick}
       <!-- Only once the backend is up, so the image never loads before the server exists. -->

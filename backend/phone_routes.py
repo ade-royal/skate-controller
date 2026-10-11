@@ -77,10 +77,10 @@ async def ws(request: web.Request) -> web.WebSocketResponse:
                 continue
             if kind == "y":
                 await app.phone.press_y()
-            elif kind == "go":
-                app.phone.set_go(bool(cmd.get("on")))
-            elif kind == "mode":
-                app.phone.set_mode(str(cmd.get("mode")))
+            elif kind == "walk":
+                app.phone.set_walk(bool(cmd.get("on")))
+            elif kind == "push":
+                app.phone.set_push(bool(cmd.get("on")))
             await sock.send_str(_state(app))
     finally:
         pusher.cancel()

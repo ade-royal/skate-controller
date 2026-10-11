@@ -25,15 +25,16 @@
     .status { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 11px; }
     .dot::before { content: "● "; color: var(--muted); }
     .dot.on::before { color: #3fd27a; }
-    .mode { background: none; border: 1px solid var(--muted); color: var(--white); font: inherit; font-size: 12px; padding: 5px 10px; }
     button.big { flex: 1; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 8px; font-family: "Babel Sans", sans-serif; font-style: oblique; transition: transform 60ms, background 60ms; }
     button.big b { font-family: "Barge", sans-serif; font-style: italic; font-size: 110px; line-height: 0.9; }
     button.big span { font-size: 15px; letter-spacing: 1px; }
-    #y { background: var(--chip); color: var(--bg); }
+    #y { flex: 0.8; background: var(--chip); color: var(--bg); }
     #y.flash { background: var(--white); }
-    #go { background: #1c1c1c; color: var(--white); border: 2px solid var(--muted); }
-    #go.on { background: var(--red); border-color: var(--red); }
+    .row { flex: 1.4; display: flex; gap: 12px; }
+    .toggle { background: #1c1c1c; color: var(--white); border: 2px solid var(--muted) !important; }
+    .toggle.on { background: var(--red); border-color: var(--red) !important; }
+    .toggle b { font-size: 64px !important; }
     button.big:active { transform: scale(0.98); }
     .offline button.big { opacity: 0.35; }
     footer { text-align: center; font-family: "Coolvetica", sans-serif; font-style: normal; font-size: 12px; color: var(--muted); }
@@ -44,16 +45,18 @@
     <h1>SKATE<small>CONTROLLER</small></h1>
     <div class="status">
       <span id="conn" class="dot">CONNECTING</span>
-      <button id="mode" class="mode" title="Tap if the game is in the other mode">MODE: WALK</button>
     </div>
   </header>
   <button id="y" class="big"><b>Y</b><span>WALK ⇄ SKATE</span></button>
-  <button id="go" class="big"><b>GO</b><span id="go-label">WALK FORWARD · OFF</span></button>
+  <div class="row">
+    <button id="walk" class="big toggle"><b>WALK</b><span id="walk-label">FORWARD · OFF</span></button>
+    <button id="push" class="big toggle"><b>PUSH</b><span id="push-label">BOARD · OFF</span></button>
+  </div>
   <footer>HACKLANTA '26, Royal x David</footer>
 
   <script>
     const $ = (id) => document.getElementById(id);
-    let ws, state = { mode: "walk", go: false, keys: true };
+    let ws, state = { walk: false, push: false, keys: true };
 
     function connect() {
       ws = new WebSocket(`ws://${location.host}/phone/ws`);
@@ -68,10 +71,10 @@
       $("conn").textContent = on ? "CONNECTED" : "RECONNECTING";
     }
     function render() {
-      const skate = state.mode === "skate";
-      $("mode").textContent = `MODE: ${skate ? "SKATE" : "WALK"}`;
-      $("go").classList.toggle("on", state.go);
-      $("go-label").textContent = `${skate ? "PUSH" : "WALK FORWARD"} · ${state.go ? "ON" : "OFF"}`;
+      $("walk").classList.toggle("on", state.walk);
+      $("push").classList.toggle("on", state.push);
+      $("walk-label").textContent = `FORWARD · ${state.walk ? "ON" : "OFF"}`;
+      $("push-label").textContent = `BOARD · ${state.push ? "ON" : "OFF"}`;
       if (!state.keys) $("conn").textContent = "KEYS OFF ON LAPTOP";
     }
     // Fire on touch-down (no tap delay); ignore the synthetic click that follows.
@@ -84,8 +87,8 @@
       $("y").classList.add("flash");
       setTimeout(() => $("y").classList.remove("flash"), 200);
     });
-    onPress($("go"), () => send({ cmd: "go", on: !state.go }));
-    onPress($("mode"), () => send({ cmd: "mode", mode: state.mode === "walk" ? "skate" : "walk" }));
+    onPress($("walk"), () => send({ cmd: "walk", on: !state.walk }));
+    onPress($("push"), () => send({ cmd: "push", on: !state.push }));
     document.addEventListener("gesturestart", (e) => e.preventDefault());
     document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
     connect();

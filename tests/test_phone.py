@@ -26,49 +26,51 @@ def make():
     return kb, PhoneRemote(keyboard=kb, push_key=PUSH)
 
 
-def test_go_in_walk_mode_holds_w_until_toggled_off():
+def test_walk_holds_w_until_toggled_off():
     async def run():
         kb, phone = make()
-        phone.set_go(True)
-        assert kb.down == {WALK_KEY}
-        phone.set_go(False)
+        phone.set_walk(True)
+        assert kb.down == {WALK_KEY} and phone.status()["walk"]
+        phone.set_walk(False)
         assert kb.down == set()
 
     asyncio.run(run())
 
 
-def test_y_taps_y_switches_mode_and_stops_go():
+def test_push_pulses_and_never_holds_w():
     async def run():
         kb, phone = make()
-        phone.set_go(True)
-        await phone.press_y()
-        assert phone.mode == "skate" and not phone.go
-        assert ("press", Y_KEY) in kb.events and kb.down == set()
-
-    asyncio.run(run())
-
-
-def test_go_in_skate_mode_pulses_push_and_releases_on_stop():
-    async def run():
-        kb, phone = make()
-        phone.set_mode("skate")
-        phone.set_go(True)
+        phone.set_push(True)
         await asyncio.sleep(0.02)
-        assert kb.down == {PUSH}
-        phone.stop()
+        assert kb.down == {PUSH} and phone.status()["push"]
+        phone.set_push(False)
         await asyncio.sleep(0)
-        assert kb.down == set() and not phone.go
+        assert kb.down == set() and not phone.status()["push"]
 
     asyncio.run(run())
 
 
-def test_mode_correction_keeps_go_running_in_new_mode():
+def test_walk_and_push_are_mutually_exclusive():
     async def run():
         kb, phone = make()
-        phone.set_go(True)
-        phone.set_mode("skate")
+        phone.set_walk(True)
+        phone.set_push(True)
         await asyncio.sleep(0.02)
-        assert WALK_KEY not in kb.down and PUSH in kb.down
+        assert WALK_KEY not in kb.down and not phone.walk and phone.push
+        phone.set_walk(True)
+        await asyncio.sleep(0)
+        assert PUSH not in kb.down and phone.walk and not phone.push
         phone.stop()
+
+    asyncio.run(run())
+
+
+def test_y_taps_y_and_stops_movement():
+    async def run():
+        kb, phone = make()
+        phone.set_push(True)
+        await phone.press_y()
+        assert ("press", Y_KEY) in kb.events and kb.down == set()
+        assert not phone.walk and not phone.push and phone.status()["y"]
 
     asyncio.run(run())
