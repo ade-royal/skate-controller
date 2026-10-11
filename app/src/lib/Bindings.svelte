@@ -4,17 +4,23 @@
 
   let { backend }: { backend: Backend } = $props();
 
-  let listening = $state<"left" | "right" | null>(null);
+  let listening = $state<"left" | "right" | "pop" | null>(null);
 
   const tick = $derived(backend.tick);
   const lean = $derived(tick?.tele.lean ?? 0);
   const pitch = $derived(tick?.tele.pitch ?? 0);
   const keysOn = $derived(tick?.keys ?? false);
+  const popOn = $derived(tick?.pop_enabled ?? false);
 
   function onkeydown(e: KeyboardEvent) {
     if (!listening) return;
     e.preventDefault();
-    if (e.key !== "Escape" && /^[a-z]$/i.test(e.key)) {
+    if (e.repeat) return;
+    if (listening === "pop" && (e.key === "Backspace" || e.key === "Delete")) {
+      backend.send({ cmd: "pop", on: false });
+    } else if (listening === "pop" && e.key === " ") {
+      backend.send({ cmd: "bind", action: "pop", key: "space" });
+    } else if (e.key !== "Escape" && /^[a-z]$/i.test(e.key)) {
       backend.send({ cmd: "bind", action: listening, key: e.key.toLowerCase() });
     }
     listening = null;
@@ -44,10 +50,26 @@
   {@render binding("left", "LEAN LEFT", "left")}
   {@render binding("right", "LEAN RIGHT", "right")}
 
-  <div class={["callout", "back", { disabled: !tick?.pop_available, active: tick?.pop }]}>
-    <span class="label">LEAN BACK · POP</span>
-    <span class="key">{(tick?.bindings.pop ?? "space").toUpperCase()}</span>
-    {#if !tick?.pop_available}<span class="soon">OFF · SOON</span>{/if}
+  <div class={["callout", "back", { disabled: !tick?.pop_available, active: keysOn && popOn && tick?.pop }]}>
+    <span class="label">BACK-FOOT · POP</span>
+    <button
+      class={["key", { listening: listening === "pop" }]}
+      disabled={!tick?.pop_available}
+      title="Click, then press Space or a letter. Delete disables pop; Escape cancels."
+      onclick={() => (listening = listening === "pop" ? null : "pop")}
+    >
+      {listening === "pop" ? "PRESS KEY" : (tick?.bindings.pop ?? "space").toUpperCase()}
+    </button>
+    <button
+      class="pop-toggle"
+      disabled={!tick?.pop_available}
+      aria-pressed={popOn}
+      title={popOn ? "Turn off pop input; steering stays on" : "Turn on pop input"}
+      onclick={() => {
+        listening = null;
+        backend.send({ cmd: "pop", on: !popOn });
+      }}
+    >POP {popOn ? "ON" : "OFF"}</button>
   </div>
 
   <div class="readout">
@@ -57,9 +79,43 @@
       CALIBRATE
     </button>
   </div>
+
+  <div class="phone">
+    {#if tick?.phone?.connected}
+      <div class="phone-keys">
+        <span class={["key", { lit: tick.phone.y }]}>Y</span>
+        <span class="label">WALK ⇄ SKATE</span>
+      </div>
+      <div class="phone-keys">
+        <span class={["key", { lit: tick.phone.go }]}>GO</span>
+        <span class="label">{tick.phone.mode === "skate" ? "PUSH" : "WALK FWD"} · {tick.phone.go ? "ON" : "OFF"}</span>
+      </div>
+    {:else if tick}
+      <!-- Only once the backend is up, so the image never loads before the server exists. -->
+      <img class="qr" src="http://127.0.0.1:8765/phone/qr.svg?u={encodeURIComponent(tick.phone_url)}" alt="Phone QR" />
+    {/if}
+    <span class="phone-label">{tick?.phone?.connected ? "PHONE CONNECTED" : "SCAN · PHONE BUTTONS"}</span>
+  </div>
 </section>
 
 <style>
+  .phone {
+    position: absolute;
+    right: 22px;
+    bottom: 62px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    font-family: var(--label);
+    font-style: oblique;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .qr { width: 132px; height: 132px; image-rendering: pixelated; }
+  .phone-keys { display: flex; align-items: center; gap: 10px; flex-direction: row-reverse; }
+  .phone-keys .key.lit { background: var(--red-hot); color: var(--white); }
+  .phone-label { letter-spacing: 0.5px; }
   .bindings {
     position: absolute;
     inset: 0;
@@ -103,7 +159,17 @@
   .active .key { background: var(--red-hot); color: var(--white); }
   .key.listening { background: var(--white); outline: 2px solid var(--red-hot); }
   .disabled { opacity: 0.4; }
-  .soon { font-size: 10px; }
+  .pop-toggle {
+    padding: 5px 9px;
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    font-family: var(--label);
+    font-style: oblique;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .pop-toggle[aria-pressed="true"] { color: var(--white); border-color: var(--red-hot); }
   .readout {
     position: absolute;
     left: 50%;

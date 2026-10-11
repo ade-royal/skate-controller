@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Skate">
+  <meta name="theme-color" content="#0b0b0b">
+  <title>Skate Controller</title>
+  <style>
+    @font-face { font-family: "Barge"; font-display: swap; src: url("/phone/fonts/Barge-BlackItalic.otf"); }
+    @font-face { font-family: "Babel Sans"; font-display: swap; src: url("/phone/fonts/BabelSans-BoldOblique.ttf"); }
+    @font-face { font-family: "Coolvetica"; font-display: swap; src: url("/phone/fonts/Coolvetica%20Rg.otf"); }
+    :root { --bg: #0b0b0b; --red: #d4161c; --chip: #d9d9d9; --white: #f4f4f4; --muted: #6b6b6b; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--white); overflow: hidden;
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+    body { display: flex; flex-direction: column; padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+      font-family: "Babel Sans", system-ui, sans-serif; font-style: oblique; gap: 12px; }
+    header { display: flex; align-items: center; justify-content: space-between; }
+    h1 { margin: 0; font-family: "Barge", sans-serif; font-style: italic; font-size: 26px; line-height: 0.9; }
+    h1 small { display: block; font-size: 17px; }
+    .status { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 11px; }
+    .dot::before { content: "● "; color: var(--muted); }
+    .dot.on::before { color: #3fd27a; }
+    .mode { background: none; border: 1px solid var(--muted); color: var(--white); font: inherit; font-size: 12px; padding: 5px 10px; }
+    button.big { flex: 1; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; font-family: "Babel Sans", sans-serif; font-style: oblique; transition: transform 60ms, background 60ms; }
+    button.big b { font-family: "Barge", sans-serif; font-style: italic; font-size: 110px; line-height: 0.9; }
+    button.big span { font-size: 15px; letter-spacing: 1px; }
+    #y { background: var(--chip); color: var(--bg); }
+    #y.flash { background: var(--white); }
+    #go { background: #1c1c1c; color: var(--white); border: 2px solid var(--muted); }
+    #go.on { background: var(--red); border-color: var(--red); }
+    button.big:active { transform: scale(0.98); }
+    .offline button.big { opacity: 0.35; }
+    footer { text-align: center; font-family: "Coolvetica", sans-serif; font-style: normal; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body class="offline">
+  <header>
+    <h1>SKATE<small>CONTROLLER</small></h1>
+    <div class="status">
+      <span id="conn" class="dot">CONNECTING</span>
+      <button id="mode" class="mode" title="Tap if the game is in the other mode">MODE: WALK</button>
+    </div>
+  </header>
+  <button id="y" class="big"><b>Y</b><span>WALK ⇄ SKATE</span></button>
+  <button id="go" class="big"><b>GO</b><span id="go-label">WALK FORWARD · OFF</span></button>
+  <footer>HACKLANTA '26, Royal x David</footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let ws, state = { mode: "walk", go: false, keys: true };
+
+    function connect() {
+      ws = new WebSocket(`ws://${location.host}/phone/ws`);
+      ws.onopen = () => setOnline(true);
+      ws.onmessage = (e) => { state = JSON.parse(e.data); render(); };
+      ws.onclose = () => { setOnline(false); setTimeout(connect, 800); };
+    }
+    function send(cmd) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(cmd)); }
+    function setOnline(on) {
+      document.body.classList.toggle("offline", !on);
+      $("conn").classList.toggle("on", on);
+      $("conn").textContent = on ? "CONNECTED" : "RECONNECTING";
+    }
+    function render() {
+      const skate = state.mode === "skate";
+      $("mode").textContent = `MODE: ${skate ? "SKATE" : "WALK"}`;
+      $("go").classList.toggle("on", state.go);
+      $("go-label").textContent = `${skate ? "PUSH" : "WALK FORWARD"} · ${state.go ? "ON" : "OFF"}`;
+      if (!state.keys) $("conn").textContent = "KEYS OFF ON LAPTOP";
+    }
+    // Fire on touch-down (no tap delay); ignore the synthetic click that follows.
+    function onPress(el, fn) {
+      el.addEventListener("pointerdown", (e) => { e.preventDefault(); fn(); });
+      el.addEventListener("click", (e) => e.preventDefault());
+    }
+    onPress($("y"), () => {
+      send({ cmd: "y" });
+      $("y").classList.add("flash");
+      setTimeout(() => $("y").classList.remove("flash"), 200);
+    });
+    onPress($("go"), () => send({ cmd: "go", on: !state.go }));
+    onPress($("mode"), () => send({ cmd: "mode", mode: state.mode === "walk" ? "skate" : "walk" }));
+    document.addEventListener("gesturestart", (e) => e.preventDefault());
+    document.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+    connect();
+  </script>
+</body>
+</html>

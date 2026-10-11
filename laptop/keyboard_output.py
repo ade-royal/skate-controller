@@ -7,6 +7,7 @@ press the key again.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 
 from controller.movement import CENTER, LEFT, RIGHT
@@ -82,6 +83,36 @@ class KeyboardOutput:
         raise ValueError(
             f"Controller state must be {LEFT}, {CENTER}, or {RIGHT}, got {state!r}."
         )
+
+
+class KeyPulseOutput:
+    """Hold a pop key briefly without blocking sensor or steering updates."""
+
+    def __init__(self, keyboard=None) -> None:
+        self._keyboard = keyboard if keyboard is not None else pynput_keyboard()
+        self._held: str | None = None
+        self._release_handle: asyncio.TimerHandle | None = None
+
+    def tap(self, key: str, duration_s: float = 0.08) -> None:
+        # A printable space resolves to VK_SPACE in pynput's Windows backend.
+        resolved = " " if key == "space" else _one_letter(key, "pop")
+        loop = asyncio.get_running_loop()
+        self.close()
+        self._held = resolved
+        try:
+            self._keyboard.press(resolved)
+            self._release_handle = loop.call_later(duration_s, self.close)
+        except Exception:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        if self._release_handle is not None:
+            self._release_handle.cancel()
+            self._release_handle = None
+        if self._held is not None:
+            self._keyboard.release(self._held)
+            self._held = None
 
 
 class NullKeyboard:

@@ -1,5 +1,6 @@
 <script lang="ts">
   // Line-art 3D skateboard that tilts with the real board.
+  import { untrack } from "svelte";
   import * as THREE from "three";
   import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
   import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
@@ -106,7 +107,8 @@
       renderer.render(scene, camera);
       frame = requestAnimationFrame(render);
     };
-    render();
+    // Read live tilt outside attachment tracking so it does not recreate WebGL.
+    untrack(render);
 
     return () => {
       cancelAnimationFrame(frame);

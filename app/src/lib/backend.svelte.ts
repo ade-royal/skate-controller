@@ -18,6 +18,7 @@ export type Tick = {
   keys: boolean;
   bridge: boolean;
   pop_available: boolean;
+  pop_enabled: boolean;
   pop: boolean;
   state: "LEFT" | "CENTER" | "RIGHT";
   held: string | null;
@@ -25,6 +26,8 @@ export type Tick = {
   center: number;
   ride_s: number;
   tele: Partial<Tele>;
+  phone: { connected: boolean; mode: "walk" | "skate"; go: boolean; y: boolean };
+  phone_url: string;
 };
 
 const URL = "ws://127.0.0.1:8765/ws";

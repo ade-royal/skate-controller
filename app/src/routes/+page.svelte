@@ -24,6 +24,7 @@
     <span class={["chip", { ok: tick?.pi === "live", bad: tick?.pi === "error" }]}>PI {piLabel}</span>
     <span class={["chip", { ok: tick?.sensor }]}>SENSOR</span>
     <span class={["chip", { ok: tick?.camera === "ok" }]}>CAM</span>
+    <span class={["chip", { ok: tick?.phone?.connected }]}>PHONE</span>
   </div>
 
   <div class="toggles">
