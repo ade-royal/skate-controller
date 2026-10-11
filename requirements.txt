@@ -1,3 +1,10 @@
-# Raspberry Pi I2C access for the MPU-6050.
-# Unit tests do not need this package.
-smbus2
+# Raspberry Pi (sensor streaming):
+#   pip install smbus2
+smbus2; sys_platform == "linux"
+
+# Windows laptop (dashboard + virtual Xbox pad; vgamepad installs the ViGEmBus driver):
+aiohttp; sys_platform == "win32"
+vgamepad; sys_platform == "win32"
+
+# Tests
+pytest

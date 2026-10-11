@@ -109,3 +109,37 @@ def classify_movement(
     """
     config = config or MovementConfig()
     return classify_steering(adjusted_steering(acceleration, config), config)
+
+
+# --- Analog steering (virtual gamepad) --------------------------------------
+# These work on filtered orientation angles in degrees (controller/orientation.py)
+# rather than raw g, so a lean maps proportionally onto a stick.
+
+
+def board_axis(orientation: dict[str, float], source: str, invert: bool, center: float = 0.0) -> float:
+    """Pick one orientation channel ('roll' or 'pitch'), remove the neutral offset, apply sign."""
+    value = orientation[source] - center
+    return -value if invert else value
+
+
+def angle_to_stick(angle: float, dead_zone: float, max_angle: float) -> float:
+    """Map a lean angle to a stick value in [-1, 1].
+
+    Inside the dead zone the stick rests at 0; outside it ramps linearly from the
+    dead zone edge and saturates at max_angle.
+    """
+    magnitude = abs(angle)
+    if magnitude <= dead_zone:
+        return 0.0
+    span = max(max_angle - dead_zone, 1e-6)
+    value = min((magnitude - dead_zone) / span, 1.0)
+    return value if angle > 0 else -value
+
+
+def stick_state(stick: float) -> str:
+    """LEFT / CENTER / RIGHT for a stick value (0 inside the dead zone)."""
+    if stick > 0:
+        return RIGHT
+    if stick < 0:
+        return LEFT
+    return CENTER

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Skate Controller</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>SKATE<span>CONTROLLER</span></h1>
+    <div class="status">
+      <span id="conn" class="pill off">NO BOARD</span>
+      <span id="rate" class="muted">0 pkt/s</span>
+      <span id="lost" class="muted">0 lost</span>
+    </div>
+    <div class="actions">
+      <button id="calibrate" title="Stand the board in its neutral position and hold still for 1 s">Calibrate (hold still)</button>
+      <button id="pad" class="toggle">Virtual pad: OFF</button>
+    </div>
+  </header>
+  <p id="pad-error" class="error"></p>
+  <p id="calib" class="notice"></p>
+
+  <main>
+    <section class="panel board-panel">
+      <h2>Board</h2>
+      <div class="scene">
+        <div id="board" class="board">
+          <div class="deck"><div class="grip">SKATE</div></div>
+          <div class="truck front"><i></i><i></i></div>
+          <div class="truck back"><i></i><i></i></div>
+        </div>
+      </div>
+      <div class="readouts">
+        <div><label>Lean</label><b id="lean">0.0°</b></div>
+        <div><label>Nose</label><b id="nose">0.0°</b></div>
+        <div><label>State</label><b id="state">CENTER</b></div>
+      </div>
+      <div class="stick">
+        <label>Left stick X</label>
+        <div class="meter"><div class="dz" id="dz"></div><div class="needle" id="needle"></div></div>
+        <div class="meter-labels"><span>-1</span><span id="stickval">0.00</span><span>+1</span></div>
+      </div>
+    </section>
+
+    <section class="panel charts">
+      <h2>Accelerometer <small>(g)</small></h2>
+      <canvas id="chart-accel" height="140"></canvas>
+      <h2>Gyroscope <small>(deg/s)</small></h2>
+      <canvas id="chart-gyro" height="140"></canvas>
+      <h2>Orientation <small>(deg)</small></h2>
+      <canvas id="chart-orient" height="140"></canvas>
+      <div class="legend">
+        <span class="x">X / roll</span><span class="y">Y / pitch</span><span class="z">Z / yaw</span>
+        <span class="lean">lean (mapped)</span>
+      </div>
+    </section>
+
+    <section class="panel mapping">
+      <h2>Mapping</h2>
+      <div class="row">
+        <label>Lean axis</label>
+        <select id="lean-source"><option>roll</option><option>pitch</option></select>
+        <label class="check"><input type="checkbox" id="lean-invert"> invert</label>
+      </div>
+      <div class="row">
+        <label>Nose axis</label>
+        <select id="nose-source"><option>roll</option><option>pitch</option></select>
+        <label class="check"><input type="checkbox" id="nose-invert"> invert</label>
+      </div>
+      <div class="row">
+        <label>Dead zone</label>
+        <input type="range" id="deadzone" min="0" max="15" step="0.5"><b id="deadzone-val"></b>
+      </div>
+      <div class="row">
+        <label>Full lean</label>
+        <input type="range" id="maxdeg" min="5" max="40" step="0.5"><b id="maxdeg-val"></b>
+      </div>
+      <p class="hint">Lean heel/toe. If the board graphic tips the wrong way or the other axis moves, change the axis or invert.</p>
+
+      <h2>Record</h2>
+      <div class="row">
+        <input id="label" placeholder="label, e.g. ollie, lean-left, push">
+        <button id="record">● Record</button>
+      </div>
+      <p id="rec-status" class="muted"></p>
+      <ul id="recordings"></ul>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
