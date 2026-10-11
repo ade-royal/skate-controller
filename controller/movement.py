@@ -1,12 +1,22 @@
 """Classify one acceleration sample as LEFT, CENTER, or RIGHT.
 
-Which MPU-6050 axis tracks skateboard lean is still unknown. Pick it with
-MovementConfig.steering_axis after watching live X/Y/Z readings. A leading
-minus, such as "-y", flips the sign if that axis moves the wrong way.
+Mounted-board testing showed accelerometer Y tracks lean. Negative Y is
+left and positive Y is right. A leading minus on steering_axis, such as
+"-y", flips that sign if a later test shows the opposite.
 
-Thresholds are in the same units as MPU6050.get_acceleration() (g). The
-defaults below are placeholders for the first physical test, not measured
-skateboard angles.
+Thresholds are in g, the same units as MPU6050.get_acceleration(), after
+center_offset is subtracted. The defaults come from one approximate pass:
+
+    neutral Y          +0.008 g -> adjusted  0.000 g
+    normal left        -0.045 g -> adjusted -0.053 g
+    normal right       +0.045 g -> adjusted +0.037 g
+    extreme left       -0.075 g -> adjusted -0.083 g
+    extreme right      +0.075 g -> adjusted +0.067 g
+
+left_threshold and right_threshold are those normal leans. They are the
+initial turn points, not a final tuning. The dead zone is half of the
+shorter normal lean (0.037 / 2 = 0.018 g). No separate wobble measurement
+was taken, so that inner band is a starting width around neutral.
 """
 
 from __future__ import annotations
@@ -24,21 +34,23 @@ STEERING_AXES = ("x", "y", "z", "-x", "-y", "-z")
 class MovementConfig:
     """Settings to tune after leaning the mounted board.
 
-    steering_axis: acceleration component to treat as lean. Not confirmed yet.
+    steering_axis: acceleration component to treat as lean. "y" matches the
+        mounted board: negative is left, positive is right.
     center_offset: rider-neutral reading on that axis. Subtracted before
-        classification so a resting board does not have to read 0 g.
+        classification. 0.008 g is the measured resting Y.
     left_threshold: adjusted value at or below this is LEFT. Must be negative
-        and outside the dead zone.
+        and outside the dead zone. -0.053 g is the measured normal left lean.
     right_threshold: adjusted value at or above this is RIGHT. Must be positive
-        and outside the dead zone.
-    dead_zone: half-width around 0 that stays CENTER.
+        and outside the dead zone. 0.037 g is the measured normal right lean.
+    dead_zone: half-width around 0 that stays CENTER. 0.018 g is half of the
+        shorter normal lean and has not been measured as sensor noise.
     """
 
-    steering_axis: str = "x"
-    center_offset: float = 0.0
-    left_threshold: float = -0.20
-    right_threshold: float = 0.20
-    dead_zone: float = 0.08
+    steering_axis: str = "y"
+    center_offset: float = 0.008
+    left_threshold: float = -0.053
+    right_threshold: float = 0.037
+    dead_zone: float = 0.018
 
     def __post_init__(self) -> None:
         if self.steering_axis not in STEERING_AXES:

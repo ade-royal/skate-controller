@@ -61,6 +61,45 @@ class ClassifySteeringTests(unittest.TestCase):
         self.assertEqual(classify_steering(0.10, self.config), CENTER)
 
 
+class MeasuredLeanTests(unittest.TestCase):
+    """Default config checked against the first mounted-board Y readings."""
+
+    def setUp(self) -> None:
+        self.config = MovementConfig()
+
+    def test_defaults_match_the_first_board_test(self) -> None:
+        self.assertEqual(self.config.steering_axis, "y")
+        self.assertEqual(self.config.center_offset, 0.008)
+        self.assertEqual(self.config.left_threshold, -0.053)
+        self.assertEqual(self.config.right_threshold, 0.037)
+        self.assertEqual(self.config.dead_zone, 0.018)
+
+    def test_neutral_y_is_center(self) -> None:
+        self.assertEqual(classify_movement(acceleration(y=0.008), self.config), CENTER)
+
+    def test_normal_and_extreme_left_are_left(self) -> None:
+        self.assertEqual(classify_movement(acceleration(y=-0.045), self.config), LEFT)
+        self.assertEqual(classify_movement(acceleration(y=-0.075), self.config), LEFT)
+
+    def test_normal_and_extreme_right_are_right(self) -> None:
+        self.assertEqual(classify_movement(acceleration(y=0.045), self.config), RIGHT)
+        self.assertEqual(classify_movement(acceleration(y=0.075), self.config), RIGHT)
+
+    def test_small_wobble_around_neutral_is_center(self) -> None:
+        # Adjusted values are +0.010 g and -0.010 g, inside the 0.018 dead zone.
+        self.assertEqual(classify_movement(acceleration(y=0.018), self.config), CENTER)
+        self.assertEqual(classify_movement(acceleration(y=-0.002), self.config), CENTER)
+
+    def test_lean_short_of_normal_is_center(self) -> None:
+        # Adjusted -0.028 g and +0.022 g are outside the dead zone and short of a turn.
+        self.assertEqual(classify_movement(acceleration(y=-0.020), self.config), CENTER)
+        self.assertEqual(classify_movement(acceleration(y=0.030), self.config), CENTER)
+
+    def test_other_axes_do_not_steer(self) -> None:
+        reading = acceleration(x=-0.50, y=0.008, z=0.50)
+        self.assertEqual(classify_movement(reading, self.config), CENTER)
+
+
 class ClassifyMovementTests(unittest.TestCase):
     def test_uses_configured_axis(self) -> None:
         config = MovementConfig(steering_axis="y")

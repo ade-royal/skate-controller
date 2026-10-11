@@ -4,9 +4,9 @@ Run this on the Raspberry Pi from the repository root:
 
     python3 scripts/test_controller.py
 
-Watch which acceleration axis changes when the board leans, then set
-MovementConfig.steering_axis, center_offset, and the thresholds in
-controller/movement.py. The steering axis is not known yet.
+Steering uses accelerometer Y from the first mounted-board test.
+Negative Y is left and positive Y is right. Change the thresholds in
+controller/movement.py if a later lean test should turn sooner or later.
 """
 
 from __future__ import annotations
