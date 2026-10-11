@@ -66,6 +66,48 @@ class SessionTests(unittest.TestCase):
         self.assertIn("CENTER", received[:right_at])
         self.assertIn("RIGHT", received)
 
+    def test_keyboard_interrupt_leaves_the_read_loop(self) -> None:
+        client, server = socket.socketpair()
+
+        def on_state(state: str) -> None:
+            if state == "LEFT":
+                raise KeyboardInterrupt
+
+        client.sendall(encode_state("LEFT"))
+        try:
+            with self.assertRaises(KeyboardInterrupt):
+                handle_client(server, on_state, idle_timeout=0.2)
+        finally:
+            client.close()
+            server.close()
+
+    def test_center_waits_for_the_full_idle_timeout(self) -> None:
+        client, server = socket.socketpair()
+        marks: list[tuple[float, str]] = []
+
+        def on_state(state: str) -> None:
+            marks.append((time.monotonic(), state))
+
+        def run() -> None:
+            handle_client(server, on_state, idle_timeout=0.6)
+
+        worker = threading.Thread(target=run)
+        worker.start()
+        try:
+            client.sendall(encode_state("LEFT"))
+            deadline = time.time() + 2
+            while not any(state == "CENTER" for _, state in marks) and time.time() < deadline:
+                time.sleep(0.05)
+        finally:
+            client.close()
+            worker.join(timeout=2)
+            server.close()
+
+        self.assertFalse(worker.is_alive())
+        left_at = next(stamp for stamp, state in marks if state == "LEFT")
+        center_at = next(stamp for stamp, state in marks if state == "CENTER")
+        self.assertGreaterEqual(center_at - left_at, 0.45)
+
 
 if __name__ == "__main__":
     unittest.main()

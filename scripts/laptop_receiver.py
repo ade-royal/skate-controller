@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 
 from laptop.keyboard_output import KeyBindings, KeyboardOutput, NullKeyboard, pynput_keyboard
 from network.protocol import DEFAULT_PORT
-from network.session import handle_client
+from network.session import handle_client, poll_accept
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -67,22 +67,54 @@ def main(argv: list[str] | None = None) -> None:
         server.bind((args.host, args.port))
         server.listen(1)
         _print_banner(args, bindings)
-        while True:
-            print("Waiting for the Raspberry Pi...")
-            connection, address = server.accept()
-            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            print(f"Connected to {address[0]}:{address[1]}")
-            try:
-                handle_client(connection, lambda state: _on_state(output, state))
-                print("Raspberry Pi disconnected.")
-            finally:
-                output.close()
-                connection.close()
+        run_until_stopped(
+            server,
+            output,
+            lambda connection: handle_client(connection, lambda state: _on_state(output, state)),
+        )
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
         output.close()
-        server.close()
+        close_socket(server)
+
+
+def run_until_stopped(server, output, on_connection) -> None:
+    """Accept Pi connections until Ctrl+C, then release keys and close sockets."""
+    try:
+        serve_connections(server, output, on_connection)
+    finally:
+        output.close()
+        close_socket(server)
+
+
+def serve_connections(server, output, on_connection) -> None:
+    """Keep accepting clients after each disconnect."""
+    announced = False
+    while True:
+        if not announced:
+            print("Waiting for the Raspberry Pi...", flush=True)
+            announced = True
+        accepted = poll_accept(server)
+        if accepted is None:
+            continue
+        connection, address = accepted
+        announced = False
+        connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        print(f"Connected to {address[0]}:{address[1]}", flush=True)
+        try:
+            on_connection(connection)
+            print("Raspberry Pi disconnected.", flush=True)
+        finally:
+            output.close()
+            close_socket(connection)
+
+
+def close_socket(connection) -> None:
+    try:
+        connection.close()
+    except OSError:
+        return
 
 
 def _on_state(output: KeyboardOutput, state: str) -> None:
