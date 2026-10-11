@@ -2,6 +2,8 @@
 
 Minimal scaffold for a sensor-driven skate controller project.
 
+Devpost here: https://devpost.com/software/skatecontroller#submission-history
+
 ## Project layout
 
 ```text
