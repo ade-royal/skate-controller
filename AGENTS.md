@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> **On the `board-dashboard` branch, read `HANDOFF.md` first.** It lists team-agreed departures from this file (virtual Xbox pad output, laptop-side orientation, wider sensor range). Don't revert them.
+
 ## Project Goal
 
 Build a motion-controlled game controller using a physical skateboard.
