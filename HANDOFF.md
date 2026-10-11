@@ -55,6 +55,9 @@ It adds:
    python3 -m pi.stream --host <laptop-ip>
    ```
 4. No Pi handy? Run `python -m tools.fake_board` on the laptop instead.
+5. skate. on PC is controller-only. `python -m tools.keyboard_pad` drives the same virtual Xbox pad
+   from the keyboard (WASD steer, Space ollie, Shift push; key list in the file). Run only one pad
+   source at a time, so the game doesn't see two controllers.
 
 ## Your task: configure the board
 
