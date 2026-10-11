@@ -4,3 +4,7 @@ smbus2
 
 # Windows laptop keyboard output. The Raspberry Pi does not need this.
 pynput
+
+# Windows: keyboard -> virtual Xbox pad bridge (tools/keyboard_pad.py).
+# skate. on PC is controller-only. Installs the ViGEmBus driver on first use.
+vgamepad; sys_platform == "win32"
